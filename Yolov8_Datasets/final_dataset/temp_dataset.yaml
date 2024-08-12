@@ -1,0 +1,10 @@
+names:
+- bearing
+- rust
+- roll3
+- roll2
+- roll
+nc: 5
+test: F:/wellvision_final/Yolov8_Datasets/final_dataset/test/images
+train: F:/wellvision_final/Yolov8_Datasets/final_dataset/train/images
+val: F:/wellvision_final/Yolov8_Datasets/final_dataset/val/images

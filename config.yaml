@@ -1,0 +1,18 @@
+credentials:
+  usernames:
+    jsmith:
+      email: jsmith@gmail.com
+      name: John Smith
+      password: $2b$12$l8Z6GqTLcT8GfXz70d5fJeOSk3T4NemDrll0OGF2q0moN8gQ7Dsq2
+    rbriggs:
+      email: rbriggs@gmail.com
+      name: Rebecca Briggs
+      password: $2b$12$joyUJgtY0fZsvLLdf6Cwr.I9Iuui45MpWDAhIsw5nwaiZt.E1pyBS
+cookie:
+  expiry_days: 0
+  key: random_signature_key
+  name: random_cookie_name
+preauthorized:
+  emails:
+  - melsby@gmail.com
+

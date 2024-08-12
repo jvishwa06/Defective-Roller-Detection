@@ -1,0 +1,5 @@
+train: Yolov8_Datasets\added_new_json\YOLOv8Dataset/train/images
+val: Yolov8_Datasets\added_new_json\YOLOv8Dataset/val/images
+test: Yolov8_Datasets\added_new_json\YOLOv8Dataset/test/images
+nc: 3
+names: ["roll3", "roll2", "roll"]

@@ -1,0 +1,13 @@
+names:
+- bearing
+- rust
+nc: 2
+roboflow:
+  license: CC BY 4.0
+  project: welvision_polarized_lens
+  url: https://universe.roboflow.com/sih-5kv5k/welvision_polarized_lens/dataset/2
+  version: 2
+  workspace: sih-5kv5k
+test: F:/wellvision_final/Yolov8_Datasets/Welvision_Polarized_Lens-2/test/images
+train: F:/wellvision_final/Yolov8_Datasets/Welvision_Polarized_Lens-2/train/images
+val: F:/wellvision_final/Yolov8_Datasets/Welvision_Polarized_Lens-2/val/images
