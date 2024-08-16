@@ -1,12 +1,12 @@
 credentials:
   usernames:
-    jsmith:
+    Admin:
       email: jsmith@gmail.com
-      name: John Smith
+      name: Admin
       password: $2b$12$l8Z6GqTLcT8GfXz70d5fJeOSk3T4NemDrll0OGF2q0moN8gQ7Dsq2
-    rbriggs:
+    Operator:
       email: rbriggs@gmail.com
-      name: Rebecca Briggs
+      name: Operator
       password: $2b$12$joyUJgtY0fZsvLLdf6Cwr.I9Iuui45MpWDAhIsw5nwaiZt.E1pyBS
 cookie:
   expiry_days: 0
@@ -15,4 +15,3 @@ cookie:
 preauthorized:
   emails:
   - melsby@gmail.com
-
