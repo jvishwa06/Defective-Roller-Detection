@@ -1,0 +1,10 @@
+{
+    "python.pythonPath": "C:\\Users\\jvish\\anaconda3\\envs\\welvision-venv\\python.exe",
+    "python.terminal.activateEnvironment": true,
+    "terminal.integrated.env.windows": {
+        "CONDA_DEFAULT_ENV": "welvision-venv",
+        "CONDA_PROMPT_MODIFIER": "(welvision-venv) ",
+        "PATH": "C:\\Users\\jvish\\anaconda3\\envs\\welvision-venv;${env:PATH}",
+        "PYTHONPATH": "C:\\Users\\jvish\\anaconda3\\envs\\welvision-venv"
+    }
+}

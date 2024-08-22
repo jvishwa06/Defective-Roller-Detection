@@ -9,6 +9,7 @@ import shutil
 import yaml
 from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
+from torch.utils.tensorboard import SummaryWriter
 
 def move_folder(source, destination):
     if not os.path.exists(source):
@@ -123,8 +124,15 @@ def stop_yolo_training(process):
         process.terminate()
         process.wait()  # Wait for the process to terminate
 
+def run_tensorboard(logdir="runs"):
+    command = ["tensorboard", "--logdir", logdir, "--host", "0.0.0.0", "--port", "6006"]
+    process = subprocess.Popen(command)
+    return process
+
 if 'process' not in st.session_state:
     st.session_state.process = None
+if 'tb_process' not in st.session_state:
+    st.session_state.tb_process = None
 
 st.title("Custom Training")
 
@@ -141,7 +149,7 @@ if uploaded_files:
             f.write(uploaded_file.getbuffer())
     st.success("Files uploaded")
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     if st.button("Annotate"):
@@ -169,3 +177,17 @@ with col4:
         stop_yolo_training(st.session_state.process)
         st.session_state.process = None
         st.write("Training stopped")
+
+with col5:
+    if st.button("TensorBoard"):
+        st.session_state.tb_process = run_tensorboard()
+        st.write("TensorBoard started")
+
+if st.session_state.tb_process:
+    st.write("### TensorBoard")
+    st.markdown(
+        """
+        <iframe src="http://localhost:6006" width="100%" height="800px" frameborder="0"></iframe>
+        """,
+        unsafe_allow_html=True
+    )

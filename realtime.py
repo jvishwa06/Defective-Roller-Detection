@@ -4,13 +4,20 @@ from ultralytics import YOLO
 import torch
 import time
 import pandas as pd
-import numpy as np
 import os
 import psutil
 
 # Load the YOLOv8 model (replace 'best.pt' with your model file)
 model = YOLO("best.pt")
 
+# Function to save frame
+def save_frame(frame, image_folder, image_id):
+    if not os.path.exists(image_folder):
+        os.makedirs(image_folder)
+    image_path = os.path.join(image_folder, f"frame_{image_id}.jpg")
+    cv2.imwrite(image_path, frame)
+
+# Function to process frame
 def process_frame(frame, min_defect_size, pixel_to_cm_ratio):
     results = model.predict(frame, conf=0.5, show=False)
     boxes = results[0].boxes.xywh.cpu()
@@ -26,6 +33,23 @@ def process_frame(frame, min_defect_size, pixel_to_cm_ratio):
             cv2.putText(frame, label, (int(x - w/2), int(y - h/2) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
     return frame
+
+# Function to save inference results to a CSV file
+def save_results_to_csv(results_folder, frame_id, object_counts, defective_count):
+    results_file = os.path.join(results_folder, "detection_results.csv")
+    if not os.path.exists(results_folder):
+        os.makedirs(results_folder)
+    
+    df = pd.DataFrame({
+        'frame_id': [frame_id],
+        'total_defective_bearings': [defective_count],
+        **{cls: [count] for cls, count in object_counts.items()}
+    })
+
+    if not os.path.isfile(results_file):
+        df.to_csv(results_file, index=False)
+    else:
+        df.to_csv(results_file, mode='a', header=False, index=False)
 
 def main():
     st.title("Real-time Defective Bearing Detection")
@@ -53,6 +77,14 @@ def main():
     else:
         min_defect_size = 0  # No size threshold if detection without size consideration
 
+    # Sidebar for image-saving options
+    image_save_limit = st.sidebar.number_input("Image Save Limit", min_value=1, value=500)
+    save_images = st.sidebar.checkbox("Save Images")
+    image_folder = "saved_images"
+
+    # Folder to store results
+    results_folder = "detection_results"
+
     # Input source selection
     if input_source.startswith("Local video"):
         video_file_1 = st.sidebar.file_uploader("Select input video 1", type=["mp4", "avi"])
@@ -78,27 +110,26 @@ def main():
 
     if start_detection:
         # Display system stats
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             cpu_text = st.empty()
         with col2:
             ram_text = st.empty()
         with col3:
             gpu_text = st.empty()
+        with col4:
+            fps_text = st.empty()
 
         # Video display
-        col4, col5 = st.columns(2)
-        with col4:
-            frame_display_1 = st.empty()
+        col5, col6 = st.columns(2)
         with col5:
+            frame_display_1 = st.empty()
+        with col6:
             frame_display_2 = st.empty()
 
         # Inference stats
         st.subheader("Inference Stats")
-        col6, col7, col8 = st.columns(3)
-        with col6:
-            st.write("FPS (Camera 1)")
-            fps_chart_1 = st.empty()
+        col7, col8 = st.columns(2)
         with col7:
             st.write("Total Defective Bearings (Camera 1)")
             total_defective_bearings_chart_1 = st.empty()
@@ -106,9 +137,6 @@ def main():
             st.write("Object Counts (Camera 1)")
             object_counts_chart_1 = st.empty()
 
-        with col6:
-            st.write("FPS (Camera 2)")
-            fps_chart_2 = st.empty()
         with col7:
             st.write("Total Defective Bearings (Camera 2)")
             total_defective_bearings_chart_2 = st.empty()
@@ -118,13 +146,15 @@ def main():
 
         # System stats
         st.subheader("System Stats")
-        col9, col10, col11 = st.columns(3)
+        col9, col10, col11, col12 = st.columns(4)
         with col9:
             cpu_usage_text = st.empty()
         with col10:
             ram_usage_text = st.empty()
         with col11:
             gpu_usage_text = st.empty()
+        with col12:
+            fps_count_text = st.empty()
 
         # Video capture
         cap_1 = cv2.VideoCapture(video_path_1, cv2.CAP_DSHOW)
@@ -139,6 +169,7 @@ def main():
         start_time_2 = time.time()
         frame_count_1 = 0
         frame_count_2 = 0
+        image_save_counter = 0
 
         while cap_1.isOpened() and cap_2.isOpened():
             ret_1, frame_1 = cap_1.read()
@@ -155,6 +186,16 @@ def main():
                 output_image_1 = frame_1
                 output_image_2 = frame_2
 
+                # Save frames if the option is enabled
+                if save_images:
+                    save_frame(output_image_1, image_folder, image_save_counter)
+                    save_frame(output_image_2, image_folder, image_save_counter + 1)
+                    image_save_counter += 2
+
+                    if image_save_counter >= image_save_limit:
+                        st.sidebar.warning("Image save limit reached.")
+                        save_images = False  # Stop saving images after the limit is reached
+
                 # Update total defective bearings detected and object counts
                 for result in model(frame_1):
                     for detection in result.boxes:
@@ -166,7 +207,7 @@ def main():
                             object_counts_1[class_name] += 1
                             if class_name != 'roller' and class_name != 'spherical':  # Assuming 'roller' and 'spherical' are not defective classes
                                 total_defective_bearings_1 += 1
-                
+
                 for result in model(frame_2):
                     for detection in result.boxes:
                         confidence = detection.conf[0]
@@ -178,42 +219,32 @@ def main():
                             if class_name != 'roller' and class_name != 'spherical':  # Assuming 'roller' and 'spherical' are not defective classes
                                 total_defective_bearings_2 += 1
 
+                # Update system stats
+                cpu_usage = psutil.cpu_percent()
+                ram_usage = psutil.virtual_memory().percent
+                gpu_usage = torch.cuda.get_device_properties(0).total_memory if torch.cuda.is_available() else 0
+                gpu_usage = (gpu_usage - torch.cuda.memory_reserved(0)) / gpu_usage * 100 if torch.cuda.is_available() else 0
+                fps_count = (frame_count_1 / (time.time() - start_time_1)) if frame_count_1 else 0
+
+                cpu_usage_text.text(f"CPU Usage: {cpu_usage}%")
+                ram_usage_text.text(f"RAM Usage: {ram_usage}%")
+                gpu_usage_text.text(f"GPU Usage: {gpu_usage:.2f}%")
+                fps_count_text.text(f"FPS: {fps_count:.2f}")
+
+                # Display frames
                 frame_display_1.image(output_image_1, channels="BGR", use_column_width=True)
                 frame_display_2.image(output_image_2, channels="BGR", use_column_width=True)
 
-                # Calculate FPS
-                elapsed_time_1 = time.time() - start_time_1
-                elapsed_time_2 = time.time() - start_time_2
-                fps_1 = frame_count_1 / elapsed_time_1 if elapsed_time_1 > 0 else 0
-                fps_2 = frame_count_2 / elapsed_time_2 if elapsed_time_2 > 0 else 0
-
-                # Prepare data for bar charts
-                fps_df_1 = pd.DataFrame([fps_1], columns=["FPS"])
-                total_defective_bearings_per_sec_1 = total_defective_bearings_1 / fps_1 if fps_1 > 0 else total_defective_bearings_1
-                total_defective_bearings_df_1 = pd.DataFrame([total_defective_bearings_per_sec_1], columns=["Total Defective Bearings"])
-                object_counts_df_1 = pd.DataFrame(list(object_counts_1.items()), columns=['Class', 'Count']).set_index('Class')
-
-                fps_df_2 = pd.DataFrame([fps_2], columns=["FPS"])
-                total_defective_bearings_per_sec_2 = total_defective_bearings_2 / fps_2 if fps_2 > 0 else total_defective_bearings_2
-                total_defective_bearings_df_2 = pd.DataFrame([total_defective_bearings_per_sec_2], columns=["Total Defective Bearings"])
-                object_counts_df_2 = pd.DataFrame(list(object_counts_2.items()), columns=['Class', 'Count']).set_index('Class')
-
                 # Update inference stats
-                fps_chart_1.bar_chart(fps_df_1)
-                total_defective_bearings_chart_1.bar_chart(total_defective_bearings_df_1)
-                object_counts_chart_1.bar_chart(object_counts_df_1)
+                total_defective_bearings_chart_1.write(f"Total Defective Bearings: {total_defective_bearings_1}")
+                object_counts_chart_1.write(pd.DataFrame(object_counts_1.items(), columns=['Class', 'Count']))
 
-                fps_chart_2.bar_chart(fps_df_2)
-                total_defective_bearings_chart_2.bar_chart(total_defective_bearings_df_2)
-                object_counts_chart_2.bar_chart(object_counts_df_2)
+                total_defective_bearings_chart_2.write(f"Total Defective Bearings: {total_defective_bearings_2}")
+                object_counts_chart_2.write(pd.DataFrame(object_counts_2.items(), columns=['Class', 'Count']))
 
-                # Update system stats
-                cpu_usage_text.text(f"CPU Usage: {psutil.cpu_percent()}%")
-                ram_usage_text.text(f"RAM Usage: {psutil.virtual_memory().percent}%")
-                if torch.cuda.is_available():
-                    gpu_usage_text.text(f"GPU Memory Usage: {torch.cuda.memory_allocated() / 1024 ** 2:.2f} MB")
-                else:
-                    gpu_usage_text.text("GPU not available")
+                # Save inference results to CSV
+                save_results_to_csv(results_folder, frame_count_1, object_counts_1, total_defective_bearings_1)
+                save_results_to_csv(results_folder, frame_count_2, object_counts_2, total_defective_bearings_2)
 
             else:
                 break

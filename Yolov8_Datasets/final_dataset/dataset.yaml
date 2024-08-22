@@ -1,9 +1,9 @@
 names:
 - bearing
 - rust
-- roll3
-- roll2
 - roll
+- roll2
+- roll3
 nc: 5
 test: Yolov8_Datasets/final_dataset\test/images
 train: Yolov8_Datasets/final_dataset\train/images
